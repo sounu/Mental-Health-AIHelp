@@ -1,0 +1,7 @@
+Thunder Client
+post man
+port 9002
+Next.js
+postgres sql,
+--------------------------------------------------------------------------
+intergrating ai
