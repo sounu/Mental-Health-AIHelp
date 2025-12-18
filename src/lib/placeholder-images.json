@@ -1,0 +1,46 @@
+{
+  "placeholderImages": [
+    {
+      "id": "meditation1",
+      "description": "A tranquil sunrise over a misty landscape.",
+      "imageUrl": "https://images.unsplash.com/photo-1610112836912-12d9b160c333?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx0cmFucXVpbCUyMHN1bnJpc2V8ZW58MHx8fHwxNzY1OTk1NTI5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "tranquil sunrise"
+    },
+    {
+      "id": "meditation2",
+      "description": "Close-up of calm water ripples.",
+      "imageUrl": "https://images.unsplash.com/photo-1621519997950-158b631341b6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjYWxtJTIwd2F0ZXJ8ZW58MHx8fHwxNzY1OTkyNTk3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "calm water"
+    },
+    {
+      "id": "meditation3",
+      "description": "A peaceful forest path with sunlight filtering through the trees.",
+      "imageUrl": "https://images.unsplash.com/photo-1605196560547-b2f7281b7355?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxmb3Jlc3QlMjBwYXRofGVufDB8fHx8MTc2NTk2NTA2M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "forest path"
+    },
+    {
+      "id": "meditation4",
+      "description": "A starry night sky over a quiet lake.",
+      "imageUrl": "https://images.unsplash.com/photo-1596016691838-70260f1e21c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxzdGFycnklMjBza3l8ZW58MHx8fHwxNzY1OTg2OTk5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "starry sky"
+    },
+    {
+      "id": "hero",
+      "description": "Abstract calming waves pattern",
+      "imageUrl": "https://images.unsplash.com/photo-1676676701499-eeea46526f2a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxhYnN0cmFjdCUyMHdhdmVzfGVufDB8fHx8MTc2NTkwOTI3OHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract waves"
+    },
+    {
+      "id": "dashboard-viz",
+      "description": "A floating 3D dashboard visualization with glowing purple and blue elements on a dark background.",
+      "imageUrl": "https://images.unsplash.com/photo-1634715841611-67741dc71459?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHwzZCUyMGRhc2hib2FyZHxlbnwwfHx8fDE3NjU5OTg5ODF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "3d dashboard"
+    },
+    {
+      "id": "social-proof",
+      "description": "A collection of fictional company logos.",
+      "imageUrl": "https://images.unsplash.com/photo-1662052955282-da15376f3919?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxjb21wYW55JTIwbG9nb3N8ZW58MHx8fHwxNzY1OTk4OTgxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "company logos"
+    }
+  ]
+}
