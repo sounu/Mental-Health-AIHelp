@@ -1,12 +1,16 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY is missing");
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
-    // 🔒 Safe body handling
+    // ---- Safe body handling ----
     const rawBody = await req.text();
 
     if (!rawBody) {
@@ -16,7 +20,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let parsed;
+    let parsed: { userId: string; message: string };
     try {
       parsed = JSON.parse(rawBody);
     } catch {
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ✅ Ensure user exists
+    // ---- Ensure user exists ----
     await prisma.user.upsert({
       where: { email: `${userId}@test.com` },
       update: {},
@@ -45,12 +49,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ✅ Create session
+    // ---- Create session ----
     const session = await prisma.session.create({
       data: { userId },
     });
 
-    // ✅ Save message
+    // ---- Save USER message ----
     await prisma.message.create({
       data: {
         sessionId: session.id,
@@ -59,7 +63,45 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ sessionId: session.id });
+    // ---- Gemini AI response (CORRECT WAY) ----
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash-latest",
+    });
+
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `You are a calm, empathetic mental health assistant.
+Respond supportively and safely.
+
+User message: ${message}`,
+            },
+          ],
+        },
+      ],
+    });
+
+    const aiReply =
+      result.response.candidates?.[0]?.content?.parts?.[0]?.text ??
+      "I'm here with you. Tell me more about how you're feeling.";
+
+    // ---- Save AI message ----
+    await prisma.message.create({
+      data: {
+        sessionId: session.id,
+        role: "AI",
+        content: aiReply,
+      },
+    });
+
+    // ---- Return response ----
+    return NextResponse.json({
+      sessionId: session.id,
+      reply: aiReply,
+    });
   } catch (err) {
     console.error("CHAT API ERROR:", err);
     return NextResponse.json(

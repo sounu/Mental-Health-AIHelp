@@ -4,4 +4,6 @@ port 9002
 Next.js
 postgres sql,
 --------------------------------------------------------------------------
-intergrating ai
+intergrating ai(Gemini)
+Install Gemini SDK
+  		   npm install @google/generative-ai
