@@ -7,3 +7,19 @@ postgres sql,
 intergrating ai(Gemini)
 Install Gemini SDK
   		   npm install @google/generative-ai
+failed,so we go with grok api calls
+-------------------------------------------------------------------------
+what i have Done-
+
+✅ Next.js API route
+
+✅ PostgreSQL + Prisma (users, sessions, messages)
+
+✅ External LLM integration (Groq / LLaMA-3.1)
+
+✅ Proper error handling
+
+✅ Persistent chat history
+
+✅ Works via curl → production-grade API behavior
+--------------------------------------------------------------------------

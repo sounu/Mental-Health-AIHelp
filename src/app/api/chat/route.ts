@@ -1,16 +1,17 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import Groq from "groq-sdk";
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error("GEMINI_API_KEY is missing");
+if (!process.env.GROQ_API_KEY) {
+  throw new Error("GROQ_API_KEY is missing");
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY,
+});
 
 export async function POST(req: NextRequest) {
   try {
-    // ---- Safe body handling ----
     const rawBody = await req.text();
 
     if (!rawBody) {
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ---- Ensure user exists ----
+    // Ensure user exists
     await prisma.user.upsert({
       where: { email: `${userId}@test.com` },
       update: {},
@@ -49,12 +50,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ---- Create session ----
+    // Create session
     const session = await prisma.session.create({
       data: { userId },
     });
 
-    // ---- Save USER message ----
+    // Save USER message
     await prisma.message.create({
       data: {
         sessionId: session.id,
@@ -63,32 +64,27 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ---- Gemini AI response (CORRECT WAY) ----
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash-latest",
-    });
-
-    const result = await model.generateContent({
-      contents: [
+    // ✅ GROQ AI RESPONSE (FREE)
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a calm, empathetic mental health assistant. Respond supportively and safely.",
+        },
         {
           role: "user",
-          parts: [
-            {
-              text: `You are a calm, empathetic mental health assistant.
-Respond supportively and safely.
-
-User message: ${message}`,
-            },
-          ],
+          content: message,
         },
       ],
     });
 
     const aiReply =
-      result.response.candidates?.[0]?.content?.parts?.[0]?.text ??
+      completion.choices[0]?.message?.content ??
       "I'm here with you. Tell me more about how you're feeling.";
 
-    // ---- Save AI message ----
+    // Save AI message
     await prisma.message.create({
       data: {
         sessionId: session.id,
@@ -97,7 +93,6 @@ User message: ${message}`,
       },
     });
 
-    // ---- Return response ----
     return NextResponse.json({
       sessionId: session.id,
       reply: aiReply,
