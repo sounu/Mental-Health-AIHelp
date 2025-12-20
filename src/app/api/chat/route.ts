@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import Groq from "groq-sdk";
 
-/* ------------------------------------------------------------------ */
-/* ENV + CLIENT SETUP */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------ */
+/* SETUP */
+/* ------------------------------------------------------------ */
 
 if (!process.env.GROQ_API_KEY) {
   throw new Error("GROQ_API_KEY is missing");
@@ -14,16 +14,13 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-/* ------------------------------------------------------------------ */
-/* CRISIS DETECTION (DETERMINISTIC, AUDITABLE) */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------ */
+/* CRISIS DETECTION */
+/* ------------------------------------------------------------ */
 
 function isCrisisMessage(text: string): boolean {
-  const normalized = text
-    .toLowerCase()
-    .replace(/[-_]/g, " ");
-
-  const crisisKeywords = [
+  const normalized = text.toLowerCase();
+  const keywords = [
     "kill myself",
     "suicide",
     "end my life",
@@ -34,30 +31,36 @@ function isCrisisMessage(text: string): boolean {
     "can't go on",
     "better off dead",
   ];
-
-  return crisisKeywords.some(keyword =>
-    normalized.includes(keyword)
-  );
+  return keywords.some(k => normalized.includes(k));
 }
 
-/* ------------------------------------------------------------------ */
-/* GET /api/chat → LOAD CHAT HISTORY */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------ */
+/* GET → LOAD LATEST SESSION HISTORY (FIX) */
+/* ------------------------------------------------------------ */
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const sessionId = searchParams.get("sessionId");
+    const userId = req.cookies.get("auth-user-id")?.value;
 
-    if (!sessionId) {
+    if (!userId) {
       return NextResponse.json(
-        { error: "Missing sessionId" },
-        { status: 400 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
+    // ✅ Always load latest session
+    const session = await prisma.session.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!session) {
+      return NextResponse.json({ messages: [] });
+    }
+
     const messages = await prisma.message.findMany({
-      where: { sessionId },
+      where: { sessionId: session.id },
       orderBy: { createdAt: "asc" },
       select: {
         role: true,
@@ -65,7 +68,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ messages });
+    return NextResponse.json({
+      sessionId: session.id,
+      messages,
+    });
   } catch (err) {
     console.error("CHAT HISTORY ERROR:", err);
     return NextResponse.json(
@@ -75,63 +81,35 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* POST /api/chat → SEND MESSAGE */
-/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------ */
+/* POST → SEND MESSAGE */
+/* ------------------------------------------------------------ */
 
 export async function POST(req: NextRequest) {
   try {
-    const rawBody = await req.text();
-    if (!rawBody) {
-      return NextResponse.json(
-        { error: "Empty body" },
-        { status: 400 }
-      );
-    }
-
-    const { userId, message, sessionId } = JSON.parse(rawBody);
+    const { message, sessionId } = await req.json();
+    const userId = req.cookies.get("auth-user-id")?.value;
 
     if (!userId || !message) {
       return NextResponse.json(
-        { error: "Missing userId or message" },
+        { error: "Unauthorized or empty message" },
         { status: 400 }
       );
     }
 
-    /* -------------------------------------------------------------- */
-    /* 1️⃣ ENSURE USER EXISTS */
-    /* -------------------------------------------------------------- */
-
-    await prisma.user.upsert({
-      where: { email: `${userId}@test.com` },
-      update: {},
-      create: {
-        id: userId,
-        email: `${userId}@test.com`,
-      },
-    });
-
-    /* -------------------------------------------------------------- */
-    /* 2️⃣ GET OR CREATE SESSION */
-    /* -------------------------------------------------------------- */
-
-    const existingSession =
+    // Resolve session
+    let activeSession =
       sessionId
-        ? await prisma.session.findUnique({
-          where: { id: sessionId },
-        })
+        ? await prisma.session.findUnique({ where: { id: sessionId } })
         : null;
 
-    const activeSession =
-      existingSession ??
-      (await prisma.session.create({
+    if (!activeSession) {
+      activeSession = await prisma.session.create({
         data: { userId },
-      }));
+      });
+    }
 
-    /* -------------------------------------------------------------- */
-    /* 3️⃣ SAVE USER MESSAGE */
-    /* -------------------------------------------------------------- */
-
+    // Save user message
     await prisma.message.create({
       data: {
         sessionId: activeSession.id,
@@ -140,23 +118,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    /* -------------------------------------------------------------- */
-    /* 🚨 CRISIS OVERRIDE */
-    /* -------------------------------------------------------------- */
-
+    // Crisis override
     if (isCrisisMessage(message)) {
-      const crisisReply = `
-I'm really sorry that you're feeling this much pain.
-You are not alone, and help is available right now.
-
-If you're in India:
-📞 AASRA Helpline: +91-9820466726 (24/7)
-
-If you're elsewhere:
-🌍 https://findahelpline.com
-
-If you feel in immediate danger, please contact local emergency services.
-`;
+      const crisisReply =
+        "I'm really sorry you're feeling this way. Help is available. If you're in India, call AASRA: +91-9820466726. Otherwise see https://findahelpline.com";
 
       await prisma.message.create({
         data: {
@@ -173,10 +138,7 @@ If you feel in immediate danger, please contact local emergency services.
       });
     }
 
-    /* -------------------------------------------------------------- */
-    /* 4️⃣ NORMAL AI RESPONSE (GROQ) */
-    /* -------------------------------------------------------------- */
-
+    // AI response
     const completion = await groq.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [
@@ -185,20 +147,13 @@ If you feel in immediate danger, please contact local emergency services.
           content:
             "You are a calm, empathetic mental health assistant. Respond supportively and safely.",
         },
-        {
-          role: "user",
-          content: message,
-        },
+        { role: "user", content: message },
       ],
     });
 
     const aiReply =
       completion.choices[0]?.message?.content ??
-      "I'm here with you. Tell me more.";
-
-    /* -------------------------------------------------------------- */
-    /* 5️⃣ SAVE AI MESSAGE */
-    /* -------------------------------------------------------------- */
+      "I'm here with you.";
 
     await prisma.message.create({
       data: {
@@ -207,10 +162,6 @@ If you feel in immediate danger, please contact local emergency services.
         content: aiReply,
       },
     });
-
-    /* -------------------------------------------------------------- */
-    /* 6️⃣ RESPONSE */
-    /* -------------------------------------------------------------- */
 
     return NextResponse.json({
       sessionId: activeSession.id,
