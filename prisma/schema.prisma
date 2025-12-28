@@ -35,14 +35,13 @@ model Message {
 }
 
 model Otp {
-  id         String   @id @default(uuid())
-  phone      String
-  codeHash   String
-  expiresAt  DateTime
+  id        String   @id @default(uuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
 
   @@index([phone])
 }
-
 
 enum Role {
   USER

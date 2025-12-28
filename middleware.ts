@@ -4,14 +4,14 @@ export function middleware(req: NextRequest) {
   const authUserId = req.cookies.get("auth-user-id")?.value;
   const pathname = req.nextUrl.pathname;
 
-  // 🔒 Protect chat UI
+  // Protect chat UI
   if (pathname.startsWith("/chat")) {
     if (!authUserId) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
   }
 
-  // 🔒 Protect chat API
+  // Protect chat API
   if (pathname.startsWith("/api/chat")) {
     if (!authUserId) {
       return NextResponse.json(

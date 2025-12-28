@@ -4,36 +4,29 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 export default function AuthButton() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check auth on mount (client-only)
-    const userId = localStorage.getItem("auth-user-id");
-    setIsAuthenticated(Boolean(userId));
+    fetch("/api/auth/me")
+      .then(res => res.json())
+      .then(data => {
+        setAuthenticated(data.authenticated);
+        setLoading(false);
+      })
+      .catch(() => {
+        setAuthenticated(false);
+        setLoading(false);
+      });
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-      });
-    } catch {
-      // ignore network errors
-    }
+  if (loading) return null;
 
-    // Clear client auth
-    localStorage.removeItem("auth-user-id");
-    localStorage.removeItem("chat-session-id");
-
-    // Redirect to login
-    window.location.href = "/login";
-  };
-
-  if (!isAuthenticated) {
+  if (!authenticated) {
     return (
       <Link
         href="/login"
-        className="text-sm font-medium text-primary hover:underline"
+        className="text-sm font-medium hover:underline"
       >
         Login
       </Link>
@@ -42,8 +35,11 @@ export default function AuthButton() {
 
   return (
     <button
-      onClick={handleLogout}
-      className="text-sm font-medium text-red-500 hover:underline"
+      onClick={async () => {
+        await fetch("/api/auth/logout", { method: "POST" });
+        window.location.href = "/login";
+      }}
+      className="text-sm text-red-500 hover:underline"
     >
       Logout
     </button>

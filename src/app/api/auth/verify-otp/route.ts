@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-function normalizePhone(phone: string): string {
-  return phone.replace(/\s+/g, "");
-}
-
-function hashOtp(otp: string): string {
+function hashOtp(otp: string) {
   return crypto.createHash("sha256").update(otp).digest("hex");
 }
 
@@ -21,46 +17,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const normalizedPhone = normalizePhone(phone);
     const otpHash = hashOtp(otp);
 
-    const otpRecord = await prisma.otp.findFirst({
+    const record = await prisma.otp.findFirst({
       where: {
-        phone: normalizedPhone,
+        phone,
         codeHash: otpHash,
         expiresAt: { gt: new Date() },
       },
     });
 
-    if (!otpRecord) {
+    if (!record) {
       return NextResponse.json(
         { error: "Invalid or expired OTP" },
         { status: 400 }
       );
     }
 
-    // ✅ Create or update user
     const user = await prisma.user.upsert({
-      where: { phone: normalizedPhone },
+      where: { phone },
       update: { verified: true },
-      create: {
-        phone: normalizedPhone,
-        verified: true,
-      },
+      create: { phone, verified: true },
     });
 
-    // Cleanup OTP
-    await prisma.otp.deleteMany({ where: { phone: normalizedPhone } });
+    await prisma.otp.deleteMany({ where: { phone } });
 
-    // ✅ SET AUTH COOKIE (THIS WAS MISSING)
     const res = NextResponse.json({ success: true });
 
+    // ✅ THIS IS THE KEY
     res.cookies.set("auth-user-id", user.id, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30 days
+      sameSite: "lax",
     });
 
     return res;
